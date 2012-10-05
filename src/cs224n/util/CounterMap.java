@@ -1,5 +1,6 @@
 package cs224n.util;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +14,7 @@ import java.util.Set;
  *
  * @author Dan Klein
  */
-public class CounterMap<K, V> {
+public class CounterMap<K, V> implements Serializable {
 
   private MapFactory<V, Double> mf;
   private Map<K, Counter<V>> counterMap;

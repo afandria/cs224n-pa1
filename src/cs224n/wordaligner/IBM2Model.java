@@ -2,15 +2,20 @@ package cs224n.wordaligner;
 
 import cs224n.util.*;
 
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.List;
 
 /**
- * IBM 1 Model:
+ * IBM 2 Model:
  * Attempt to learn probabilities of source words translating to
  * target words, depending on co-occurences found in the corpus.
+ *
+ * This time we also model q, a distortion-like value depending on
+ * alignments found in the corpus.
  *
  * IMPORTANT: Make sure that you read the comments in the
  * cs224n.wordaligner.WordAligner interface.
@@ -18,7 +23,7 @@ import java.util.List;
  * @author Dan Klein
  * @author Spence Green
  */
-public class IBM1Model implements WordAligner {
+public class IBM2Model implements WordAligner {
 
   public static final double EXTREMELY_LARGE = 9999999;
   public static final int MAX_ATTEMPTS = 50;
@@ -26,23 +31,21 @@ public class IBM1Model implements WordAligner {
 
   private static final long serialVersionUID = 1315751943476440515L;
 
-  // All the source words
-  //private Counter<String> sourceCounts;
-  // All the target words
-  //private Counter<String> targetCounts;
-
   // I want to know the prob of an t word given an s word (or NULL)
   // To initialize, I need to know the # of s words... (sources)
   // since it should be 1/(s+1)
   private CounterMap<String, String> probTgivenS;
+  
+  private CounterMap<String, String> qA_IgivenINM;
 
-  // Counts co-occurrences, but currently unused for IBM1Model
-  //private CounterMap<String,String> sourceTargetCounts;
-
-  public IBM1Model() {
+public IBM2Model() {
 	super();
-	
+
+	System.out.println("HELLO");
+	System.out.flush();
 	probTgivenS = new CounterMap<String, String>();
+	
+	qA_IgivenINM = new CounterMap<String, String>();
   }
 
 
@@ -69,8 +72,6 @@ public class IBM1Model implements WordAligner {
 
 	  if (bestI != -1) {
 	    alignment.addPredictedAlignment(j, bestI);
-      } else {
-        System.out.println("was null");
       }
 	}
 
@@ -84,65 +85,36 @@ public class IBM1Model implements WordAligner {
     return alignment;
   }
   
-  private void initialize(List<SentencePair> trainingPairs) {
-	Counter<String> sourceCounts = new Counter<String>();
-	Counter<String> targetCounts = new Counter<String>();
+  @SuppressWarnings("unchecked")
+private void initialize(List<SentencePair> trainingPairs) {
+	System.out.println("start loading IBM1 Model data");
+	long start = System.currentTimeMillis();
+	try {
+	  FileInputStream fileIn = new FileInputStream("IBM1Model_probTgivenS.ser");
+	  ObjectInputStream in = new ObjectInputStream(fileIn);
+	  probTgivenS = (CounterMap<String, String>)in.readObject();
+	  in.close();
+	  fileIn.close();
+
+	} catch (IOException e) {
+		e.printStackTrace();
+	} catch (ClassNotFoundException e) {
+		e.printStackTrace();
+	}
 	
-	// Add NULL, so that it's in the source keyset
-	sourceCounts.setCount(NULL_WORD, 0);
-
-    // Begin by getting a rough count of the data
-    for (SentencePair pair : trainingPairs) {
-	  List<String> targetWords = pair.getTargetWords();
-      List<String> sourceWords = pair.getSourceWords();
-      for(String source : sourceWords){
-        sourceCounts.incrementCount(source, 1.0);
-        for(String target : targetWords){
-          targetCounts.incrementCount(target, 1.0);
-        }
-      }
-	}
-
-	// Now we know all of the words that exist.
-	// So we can initialize our probTgivenS CounterMap
-	double initialValue = 1. / (sourceCounts.size());
-	for (String source : sourceCounts.keySet()) {
-      for (String target : targetCounts.keySet()) {
-	    probTgivenS.setCount(source, target, initialValue);
-	  }
-	}
+	System.out.println("Done loading IBM1 Model data in " + (System.currentTimeMillis() - start) + " ms");
   }
 
   public void train(List<SentencePair> trainingPairs) {
-    initialize(trainingPairs);
-
+	initialize(trainingPairs);
+   /*
     // Now for the real meat of the algorithm
     int attempts = 0;
     double maxDiff = EXTREMELY_LARGE;
     while (attempts < MAX_ATTEMPTS && maxDiff > MIN_CHANGE) {
       maxDiff = subtrain(trainingPairs, attempts);
       ++attempts;
-	}
-    
-    // Now that we're done, serialize the data into a binary file.
-    // This will be used for IBM2Model.java
-    try
-    {
-       /*FileOutputStream fileOut = new FileOutputStream("IBM1Model.ser");
-       ObjectOutputStream out = new ObjectOutputStream(fileOut);
-       out.writeObject(this);
-       out.close();
-       fileOut.close();*/
-      FileOutputStream fileOut = new FileOutputStream("IBM1Model_probTgivenS.ser");
-      ObjectOutputStream out = new ObjectOutputStream(fileOut);
-      out.writeObject(probTgivenS);
-      out.flush();
-      out.close();
-      fileOut.close();
-      
-    } catch(IOException i) {
-        i.printStackTrace();
-    }
+	}*/
   }
 
   // Performs 1 iteration of the IBM 1 Model
