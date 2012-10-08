@@ -70,7 +70,7 @@ public class IBM1Model implements WordAligner {
 	  if (bestI != -1) {
 	    alignment.addPredictedAlignment(j, bestI);
       } else {
-        System.out.println("was null");
+        // System.out.println("was null");
       }
 	}
 
@@ -85,7 +85,7 @@ public class IBM1Model implements WordAligner {
   }
   
   private void initialize(List<SentencePair> trainingPairs) {
-	Counter<String> sourceCounts = new Counter<String>();
+	/*Counter<String> sourceCounts = new Counter<String>();
 	Counter<String> targetCounts = new Counter<String>();
 	
 	// Add NULL, so that it's in the source keyset
@@ -110,7 +110,17 @@ public class IBM1Model implements WordAligner {
       for (String target : targetCounts.keySet()) {
 	    probTgivenS.setCount(source, target, initialValue);
 	  }
-	}
+	}*/
+    for (SentencePair pair : trainingPairs) {
+  	  List<String> targetWords = pair.getTargetWords();
+      List<String> sourceWords = pair.getSourceWords();
+      for(String target : targetWords){
+        for(String source : sourceWords){
+          probTgivenS.setCount(source, target, 1.0);
+        }
+        probTgivenS.setCount(NULL_WORD, target, 1.0); // also deal with NULL
+      }
+  	}
   }
 
   public void train(List<SentencePair> trainingPairs) {
