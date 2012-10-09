@@ -25,9 +25,10 @@ import java.util.List;
  */
 public class IBM2Model implements WordAligner {
   public static final String SEP = "<+>";
+  public static final double INCREASE_RATIO = 1.0000;
 	
-  public static final double EXTREMELY_LARGE = 9999999;
-  public static final int MAX_ATTEMPTS = 50;
+  public static final double EXTREMELY_LARGE = 99999999;
+  public static final int MAX_ATTEMPTS = 100;
   public static final double MIN_CHANGE = .01;
 
   private static final long serialVersionUID = 1315751943476440515L;
@@ -130,9 +131,20 @@ private void initialize(List<SentencePair> trainingPairs) {
 
     // Now for the real meat of the algorithm
     int attempts = 0;
-    double maxDiff = EXTREMELY_LARGE;
-    while (attempts < MAX_ATTEMPTS && maxDiff > MIN_CHANGE) {
-      maxDiff = subtrain(trainingPairs, attempts);
+    double oldLLH = -1 * EXTREMELY_LARGE;
+    while (attempts < MAX_ATTEMPTS) {
+      double newLLH = subtrain(trainingPairs, attempts);
+      
+      System.out.println("Attempt #: " + attempts + " LLH: " + newLLH);
+      System.out.flush();
+      
+      // Note that oldLLH < 0, so our INCREASE_RATIO just needs to make newLLH less negative.
+      // If it is at least 5% less negative than before, we are making progress and can iterate.
+      if (newLLH > oldLLH / INCREASE_RATIO) {
+        oldLLH = newLLH;
+      } else {
+        break;
+      }
       ++attempts;
 	}
   }
@@ -279,9 +291,50 @@ private void initialize(List<SentencePair> trainingPairs) {
   	  }
   	}
 
-    System.out.println("Attempt #" + attempts + ": " + maxChange);
+    System.out.println("Attempt #" + attempts + " Max change: " + maxChange);
     System.out.println(probTgivenS.getCount("le", "the"));
     System.out.println(qA_IgivenINM.getCount("0", "0" + SEP + "7" + SEP + "7"));
-    return maxChange;
+    //return maxChange;
+    
+    return logLikelihood(trainingPairs);
+  }
+  
+  // Compute the log likelihood of the training set given our current q and p parameters
+  private double logLikelihood(List<SentencePair> trainingPairs) {
+    // Log Likelihood = SUM[all pairs a]
+	  
+	double llh = 0;
+	  
+	for (SentencePair sentencePair : trainingPairs) {
+      List<String> targetWords = sentencePair.getTargetWords();
+      List<String> sourceWords = sentencePair.getSourceWords();
+
+      // Let's see...
+      // We probably want to estimate P(a_i = j | t, s)
+      // And we'll probably want to pick the j that makes the largest P
+
+      for (int i = 0; i < targetWords.size(); i++) {
+        // Start by assuming the best is NULL_WORD, then improve on this
+	    String jStr = "" + sourceWords.size();
+	    String inmStr = "" + i + SEP + sourceWords.size() + SEP + targetWords.size();
+	    String targetWord = targetWords.get(i);
+	  
+	    int bestJ = -1; // null
+	    double bestAlignProb = qA_IgivenINM.getCount(jStr, inmStr) * probTgivenS.getCount(NULL_WORD, targetWord);
+        for (int j = 0; j < sourceWords.size(); j++) {
+          jStr = "" + j;
+          double prob = qA_IgivenINM.getCount(jStr, inmStr) * probTgivenS.getCount(sourceWords.get(j), targetWords.get(i));
+
+          if (prob > bestAlignProb) {
+	        bestJ = j;
+	        bestAlignProb = prob;
+		  }
+	    }
+        
+        llh += Math.log(bestAlignProb);
+	  }
+	}
+    
+	return llh;
   }
 }
