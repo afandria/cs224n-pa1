@@ -25,7 +25,7 @@ import java.util.List;
  */
 public class IBM2Model implements WordAligner {
   public static final String SEP = "<+>";
-  public static final double INCREASE_RATIO = 1.0000;
+  public static final double INCREASE_RATIO = 1.0005;
 	
   public static final double EXTREMELY_LARGE = 99999999;
   public static final int MAX_ATTEMPTS = 100;
