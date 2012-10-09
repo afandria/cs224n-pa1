@@ -42,10 +42,7 @@ public class IBM2Model implements WordAligner {
 public IBM2Model() {
 	super();
 
-	System.out.println("HELLO");
-	System.out.flush();
 	probTgivenS = new CounterMap<String, String>();
-	
 	qA_IgivenINM = new CounterMap<String, String>();
   }
 

@@ -20,6 +20,8 @@ import java.util.List;
  */
 public class IBM1Model implements WordAligner {
 
+  public static final double INCREASE_RATIO = 1.0005;
+
   public static final double EXTREMELY_LARGE = 9999999;
   public static final int MAX_ATTEMPTS = 50;
   public static final double MIN_CHANGE = .01;
@@ -128,9 +130,21 @@ public class IBM1Model implements WordAligner {
 
     // Now for the real meat of the algorithm
     int attempts = 0;
-    double maxDiff = EXTREMELY_LARGE;
-    while (attempts < MAX_ATTEMPTS && maxDiff > MIN_CHANGE) {
-      maxDiff = subtrain(trainingPairs, attempts);
+    double oldLLH = -1 * EXTREMELY_LARGE;
+    while (attempts < MAX_ATTEMPTS) {
+      double newLLH = subtrain(trainingPairs, attempts);
+      
+      System.out.println("Attempt #: " + attempts + " LLH: " + newLLH);
+      System.out.flush();
+      
+      // Note that oldLLH < 0, so our INCREASE_RATIO just needs to make newLLH less negative.
+      // If it is at least 5% less negative than before, we are making progress and can iterate.
+      if (newLLH > oldLLH / INCREASE_RATIO) {
+        oldLLH = newLLH;
+      } else {
+        break;
+      }
+      
       ++attempts;
 	}
     
@@ -220,6 +234,44 @@ public class IBM1Model implements WordAligner {
 
     System.out.println("Attempt #" + attempts + ": " + maxChange);
     System.out.println(probTgivenS.getCount("le", "the"));
-    return maxChange;
+    //return maxChange;
+    
+    return logLikelihood(trainingPairs);
+  }
+
+  // Compute the log likelihood of the training set given our current q and p parameters
+  private double logLikelihood(List<SentencePair> trainingPairs) {
+    // Log Likelihood = SUM[all pairs a]
+	  
+	double llh = 0;
+	  
+	for (SentencePair sentencePair : trainingPairs) {
+      List<String> targetWords = sentencePair.getTargetWords();
+      List<String> sourceWords = sentencePair.getSourceWords();
+
+      // Let's see...
+      // We probably want to estimate P(a_i = j | t, s)
+      // And we'll probably want to pick the j that makes the largest P
+
+      for (int i = 0; i < targetWords.size(); i++) {
+        // Start by assuming the best is NULL_WORD, then improve on this
+	    String targetWord = targetWords.get(i);
+	  
+	    int bestJ = -1; // null
+	    double bestAlignProb = probTgivenS.getCount(NULL_WORD, targetWord);
+        for (int j = 0; j < sourceWords.size(); j++) {
+          double prob = probTgivenS.getCount(sourceWords.get(j), targetWords.get(i));
+
+          if (prob > bestAlignProb) {
+	        bestJ = j;
+	        bestAlignProb = prob;
+		  }
+	    }
+        
+        llh += Math.log(bestAlignProb);
+	  }
+	}
+    
+	return llh;
   }
 }
