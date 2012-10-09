@@ -1,0 +1,7 @@
+/afs/ir.stanford.edu/users/a/m/aman313/Documents/cs224n/pa1-mt/training/corpus_IBM1
+/afs/ir.stanford.edu/users/a/m/aman313/Documents/cs224n/pa1-mt/train/model/moses_IBM1.ini
+6
+4
+MERT
+/afs/ir.stanford.edu/users/a/m/aman313/Documents/cs224n/pa1-mt/IBM1_dev_test.out
+/afs/ir.stanford.edu/users/a/m/aman313/Documents/cs224n/pa1-mt/tune/moses_IBM1.ini
