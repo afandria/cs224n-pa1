@@ -118,9 +118,9 @@ private void initialize(List<SentencePair> trainingPairs) {
       	String inmStr = "" + i + SEP + sourceWords.size() + SEP + targetWords.size();
         for(int j = 0; j < sourceWords.size(); j++) {
         	String jStr = "" + j;
-        	qA_IgivenINM.setCount(jStr, inmStr, Math.random());
+        	qA_IgivenINM.setCount(jStr, inmStr, 1./(sourceWords.size() + 1));//Math.random());
         }
-        qA_IgivenINM.setCount("" + sourceWords.size(), inmStr, Math.random()); // also deal with NULL
+        qA_IgivenINM.setCount("" + sourceWords.size(), inmStr, 1./(sourceWords.size() + 1));//Math.random()); // also deal with NULL
       }
     }
   }
@@ -161,12 +161,28 @@ private void initialize(List<SentencePair> trainingPairs) {
 			String jStr = "" + j;
 			sum += qA_IgivenINM.getCount(jStr, inmStr) * probTgivenS.getCount(s, t);
 		}
+		// and NULL
+		sum += qA_IgivenINM.getCount("" + sourceWords.size(), inmStr) * probTgivenS.getCount(NULL_WORD, t);
+		
+		/*if (Double.isNaN(sum) && Math.random() < .00001) {
+			System.out.println("The sum was the NaN one");
+		}*/
+        //if (sum == 0) { System.out.println("You are about to divide by 0"); }
+		
 		for (int j = 0; j < sourceWords.size(); ++j) {
 			String s = sourceWords.get(j);
 			String jStr = "" + j;
 			
 			double p = qA_IgivenINM.getCount(jStr, inmStr) * probTgivenS.getCount(s, t);
 			double d_kij = p / sum;
+			
+			if (Double.isNaN(d_kij))
+			  d_kij = 0;
+
+			/*if (Double.isNaN(d_kij) && Math.random() < .00001) {
+				System.out.println("It's d_kij that's NaN");
+			}*/
+			
 			stAlignmentCounts.incrementCount(s, t, d_kij);
 			jilmAlignmentCounts.incrementCount(jStr, inmStr, d_kij);
 		}
@@ -174,6 +190,8 @@ private void initialize(List<SentencePair> trainingPairs) {
 		// Handle NULL
 		double p = qA_IgivenINM.getCount("" + sourceWords.size(), inmStr) * probTgivenS.getCount(NULL_WORD, t);
 		double d_kij = p / sum;
+		if (Double.isNaN(d_kij))
+		  d_kij = 0;
 		stAlignmentCounts.incrementCount(NULL_WORD, t, d_kij);
 		jilmAlignmentCounts.incrementCount("" + sourceWords.size(), inmStr, d_kij);
       }
@@ -194,35 +212,67 @@ private void initialize(List<SentencePair> trainingPairs) {
 	  // The numerator is just a single stAlignmentCount
 	  for (String target : probTgivenS.getCounter(source).keySet()) {
         double newProb = stAlignmentCounts.getCount(source, target) / sum;
+        
+        if (sum == 0) {
+          newProb = 1./probTgivenS.getCounter(source).keySet().size();
+        }
+        if (Double.isNaN(newProb))
+          System.out.println("We have a problem with NaN in P");
 
         // Update the maximum change value
         double change = Math.abs(probTgivenS.getCount(source, target) - newProb);
         if (change > maxChange) {
 	      maxChange = change;
 		}
+        
+
+        if (Math.random() < .00001)
+          System.out.println("New P: " + newProb);
 
         // Set the new probability!
         probTgivenS.setCount(source, target, newProb);
 	  }
 	}
-    // Now renormalize the q
-    for (String jStr : qA_IgivenINM.keySet()) {
+    // Now renormalize the q, by finding c(inm), which means counting over all source indexes
+    for (String inmStr : qA_IgivenINM.getCounter("0").keySet()) {
         // find the denominator
         // a sum over all target given this source
-        double sum = 0;
-        for (String inmStr : qA_IgivenINM.getCounter(jStr).keySet()) {
+      double sum = 0;
+      for (String jStr : qA_IgivenINM.keySet()) {
   		sum += jilmAlignmentCounts.getCount(jStr, inmStr);
   	  }
+      /*if (Double.isNaN(sum) && Math.random() < .00001) {
+		System.out.println("The sum was the NaN one during renorm");
+      }*/
+
+      //if (sum == 0) { System.out.println("You are about to divide by 0 in renorm"); }
 
   	  // The numerator is just a single stAlignmentCount
-  	  for (String inmStr : qA_IgivenINM.getCounter(jStr).keySet()) {
-          double newProb = jilmAlignmentCounts.getCount(jStr, inmStr) / sum;
-
-          // Update the maximum change value
-          double change = Math.abs(qA_IgivenINM.getCount(jStr, inmStr) - newProb);
-          if (change > maxChange) {
-  	      maxChange = change;
+  	  for (String jStr : qA_IgivenINM.keySet()) {
+  		// Avoid storing a value for a mismatched jStr and inmStr
+  		// You also do not need to update if the value will end up being 0 anyway.
+  		if (jilmAlignmentCounts.getCount(jStr, inmStr) == 0) {
+  		  continue;
   		}
+  		  
+        double newProb = jilmAlignmentCounts.getCount(jStr, inmStr) / sum;
+        /*if (Double.isNaN(newProb) && Math.random() < .00001) {
+    		System.out.println("It's just newprob that was the NaN one during renorm");
+          }*/
+        if (sum == 0)
+        	newProb = 1./qA_IgivenINM.getCounter(jStr).keySet().size();
+        if (Double.isNaN(newProb)) {
+          System.out.println("NaN problem");
+        }
+
+        // Update the maximum change value
+        double change = Math.abs(qA_IgivenINM.getCount(jStr, inmStr) - newProb);
+        if (change > maxChange) {
+          //maxChange = change;
+  		}
+        
+        if (Math.random() < .00001)
+          System.out.println("New Q: " + newProb + " Old Q: " + qA_IgivenINM.getCount(jStr, inmStr) + " " + jStr + "," + inmStr + " " + sum);
 
         // Set the new probability!
         qA_IgivenINM.setCount(jStr, inmStr, newProb);
@@ -231,7 +281,7 @@ private void initialize(List<SentencePair> trainingPairs) {
 
     System.out.println("Attempt #" + attempts + ": " + maxChange);
     System.out.println(probTgivenS.getCount("le", "the"));
-    System.out.println(qA_IgivenINM.getCount("le", "the"));
+    System.out.println(qA_IgivenINM.getCount("0", "0" + SEP + "7" + SEP + "7"));
     return maxChange;
   }
 }

@@ -177,6 +177,9 @@ public class IBM1Model implements WordAligner {
 		for (int i = 0; i < sourceWords.size(); ++i) {
 			sum += probTgivenS.getCount(sourceWords.get(i), t);
 		}
+		// And NULL
+		sum += probTgivenS.getCount(NULL_WORD, t);
+		
 		for (int i = 0; i < sourceWords.size(); ++i) {
 			double p = probTgivenS.getCount(sourceWords.get(i), t);
 			stAlignmentCounts.incrementCount(sourceWords.get(i), t, p / sum);
