@@ -3,10 +3,8 @@ package cs224n.wordaligner;
 import cs224n.util.*;
 
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.List;
 
 /**
@@ -78,14 +76,6 @@ public IBM2Model() {
 	    alignment.addPredictedAlignment(i, bestJ);
       }
 	}
-
-    /*for (int srcIndex = 0; srcIndex < numSourceWords; srcIndex++) {
-      int tgtIndex = srcIndex;
-      if (tgtIndex < numTargetWords) {
-        // Discard null alignments
-        alignment.addPredictedAlignment(tgtIndex, srcIndex);
-      }
-    }*/
     return alignment;
   }
   
@@ -173,11 +163,6 @@ private void initialize(List<SentencePair> trainingPairs) {
 		// and NULL
 		sum += qA_IgivenINM.getCount("" + sourceWords.size(), inmStr) * probTgivenS.getCount(NULL_WORD, t);
 		
-		/*if (Double.isNaN(sum) && Math.random() < .00001) {
-			System.out.println("The sum was the NaN one");
-		}*/
-        //if (sum == 0) { System.out.println("You are about to divide by 0"); }
-		
 		for (int j = 0; j < sourceWords.size(); ++j) {
 			String s = sourceWords.get(j);
 			String jStr = "" + j;
@@ -188,10 +173,6 @@ private void initialize(List<SentencePair> trainingPairs) {
 			if (Double.isNaN(d_kij))
 			  d_kij = 0;
 
-			/*if (Double.isNaN(d_kij) && Math.random() < .00001) {
-				System.out.println("It's d_kij that's NaN");
-			}*/
-			
 			stAlignmentCounts.incrementCount(s, t, d_kij);
 			jilmAlignmentCounts.incrementCount(jStr, inmStr, d_kij);
 		}
@@ -233,10 +214,6 @@ private void initialize(List<SentencePair> trainingPairs) {
         if (change > maxChange) {
 	      maxChange = change;
 		}
-        
-
-        if (Math.random() < .00001)
-          System.out.println("New P: " + newProb);
 
         // Set the new probability!
         probTgivenS.setCount(source, target, newProb);
@@ -250,11 +227,6 @@ private void initialize(List<SentencePair> trainingPairs) {
       for (String jStr : qA_IgivenINM.keySet()) {
   		sum += jilmAlignmentCounts.getCount(jStr, inmStr);
   	  }
-      /*if (Double.isNaN(sum) && Math.random() < .00001) {
-		System.out.println("The sum was the NaN one during renorm");
-      }*/
-
-      //if (sum == 0) { System.out.println("You are about to divide by 0 in renorm"); }
 
   	  // The numerator is just a single stAlignmentCount
   	  for (String jStr : qA_IgivenINM.keySet()) {
@@ -265,16 +237,13 @@ private void initialize(List<SentencePair> trainingPairs) {
   		}
   		  
         double newProb = jilmAlignmentCounts.getCount(jStr, inmStr) / sum;
-        /*if (Double.isNaN(newProb) && Math.random() < .00001) {
-    		System.out.println("It's just newprob that was the NaN one during renorm");
-          }*/
         if (sum == 0)
         	newProb = 1./qA_IgivenINM.getCounter(jStr).keySet().size();
         if (Double.isNaN(newProb)) {
           System.out.println("NaN problem");
         }
 
-        // Update the maximum change value
+        // Update the maximum change value (except not for q)
         double change = Math.abs(qA_IgivenINM.getCount(jStr, inmStr) - newProb);
         if (change > maxChange) {
           //maxChange = change;
@@ -289,10 +258,14 @@ private void initialize(List<SentencePair> trainingPairs) {
   	}
 
     System.out.println("Attempt #" + attempts + " Max change: " + maxChange);
-    System.out.println(probTgivenS.getCount("le", "the"));
-    System.out.println(qA_IgivenINM.getCount("0", "0" + SEP + "7" + SEP + "7"));
-    //return maxChange;
     
+    // Debug printout that is really only meaningful for French -> English
+    System.out.println(probTgivenS.getCount("le", "the"));
+    
+    // Debug checking how likely the 1st word is still the 1st word in size-7 source and target sentences
+    System.out.println(qA_IgivenINM.getCount("0", "0" + SEP + "7" + SEP + "7"));
+    
+    //return maxChange;
     return logLikelihood(trainingPairs);
   }
   
@@ -316,14 +289,12 @@ private void initialize(List<SentencePair> trainingPairs) {
 	    String inmStr = "" + i + SEP + sourceWords.size() + SEP + targetWords.size();
 	    String targetWord = targetWords.get(i);
 	  
-	    int bestJ = -1; // null
 	    double bestAlignProb = qA_IgivenINM.getCount(jStr, inmStr) * probTgivenS.getCount(NULL_WORD, targetWord);
         for (int j = 0; j < sourceWords.size(); j++) {
           jStr = "" + j;
           double prob = qA_IgivenINM.getCount(jStr, inmStr) * probTgivenS.getCount(sourceWords.get(j), targetWords.get(i));
 
           if (prob > bestAlignProb) {
-	        bestJ = j;
 	        bestAlignProb = prob;
 		  }
 	    }

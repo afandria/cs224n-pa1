@@ -3,7 +3,6 @@ package cs224n.wordaligner;
 import cs224n.util.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Simple word alignment baseline model that maps source positions to target 
@@ -69,15 +68,17 @@ public class PMIModel implements WordAligner {
     for(SentencePair pair : trainingPairs){
       List<String> targetWords = pair.getTargetWords();
       List<String> sourceWords = pair.getSourceWords();
+      for (String source : sourceWords) {
+	   	  sourceCounts.incrementCount(source,1);
+      }
+      
       for(String target : targetWords){
         for(String source : sourceWords){
-          // TODO: Warm-up. Your code here for collecting sufficient statistics.
           sourceTargetCounts.incrementCount(source, target, 1);
-          if(targetWords.size() > sourceWords.size()){
-        	  sourceTargetCounts.incrementCount(NULL_WORD, target , 1); // If the source length is more than the target length then increment the count of each source word being mapped to NULL by one.
-        	  sourceCounts.incrementCount(NULL_WORD, 1);
-          }
-	   	  sourceCounts.incrementCount(source,1);
+        }
+        if(targetWords.size() > sourceWords.size()){
+      	  sourceTargetCounts.incrementCount(NULL_WORD, target , 1); // If the source length is more than the target length then increment the count of each source word being mapped to NULL by one.
+      	  sourceCounts.incrementCount(NULL_WORD, 1);
         }
     	targetCounts.incrementCount(target,1); 
       }

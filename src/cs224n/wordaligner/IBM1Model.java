@@ -28,11 +28,6 @@ public class IBM1Model implements WordAligner {
 
   private static final long serialVersionUID = 1315751943476440515L;
 
-  // All the source words
-  //private Counter<String> sourceCounts;
-  // All the target words
-  //private Counter<String> targetCounts;
-
   // I want to know the prob of an t word given an s word (or NULL)
   // To initialize, I need to know the # of s words... (sources)
   // since it should be 1/(s+1)
@@ -75,45 +70,11 @@ public class IBM1Model implements WordAligner {
         // System.out.println("was null");
       }
 	}
-
-    /*for (int srcIndex = 0; srcIndex < numSourceWords; srcIndex++) {
-      int tgtIndex = srcIndex;
-      if (tgtIndex < numTargetWords) {
-        // Discard null alignments
-        alignment.addPredictedAlignment(tgtIndex, srcIndex);
-      }
-    }*/
     return alignment;
   }
   
   private void initialize(List<SentencePair> trainingPairs) {
-	/*Counter<String> sourceCounts = new Counter<String>();
-	Counter<String> targetCounts = new Counter<String>();
-	
-	// Add NULL, so that it's in the source keyset
-	sourceCounts.setCount(NULL_WORD, 0);
-
-    // Begin by getting a rough count of the data
-    for (SentencePair pair : trainingPairs) {
-	  List<String> targetWords = pair.getTargetWords();
-      List<String> sourceWords = pair.getSourceWords();
-      for(String source : sourceWords){
-        sourceCounts.incrementCount(source, 1.0);
-        for(String target : targetWords){
-          targetCounts.incrementCount(target, 1.0);
-        }
-      }
-	}
-
-	// Now we know all of the words that exist.
-	// So we can initialize our probTgivenS CounterMap
-	double initialValue = 1. / (sourceCounts.size());
-	for (String source : sourceCounts.keySet()) {
-      for (String target : targetCounts.keySet()) {
-	    probTgivenS.setCount(source, target, initialValue);
-	  }
-	}*/
-    for (SentencePair pair : trainingPairs) {
+	for (SentencePair pair : trainingPairs) {
   	  List<String> targetWords = pair.getTargetWords();
       List<String> sourceWords = pair.getSourceWords();
       for(String target : targetWords){
@@ -152,11 +113,6 @@ public class IBM1Model implements WordAligner {
     // This will be used for IBM2Model.java
     try
     {
-       /*FileOutputStream fileOut = new FileOutputStream("IBM1Model.ser");
-       ObjectOutputStream out = new ObjectOutputStream(fileOut);
-       out.writeObject(this);
-       out.close();
-       fileOut.close();*/
       FileOutputStream fileOut = new FileOutputStream("IBM1Model_probTgivenS.ser");
       ObjectOutputStream out = new ObjectOutputStream(fileOut);
       out.writeObject(probTgivenS);
@@ -178,9 +134,6 @@ public class IBM1Model implements WordAligner {
     for(SentencePair pair : trainingPairs) {
       List<String> targetWords = pair.getTargetWords();
       List<String> sourceWords = pair.getSourceWords();
-
-      // Add in a NULL for each sourceSentence
-      // sourceWords.add(NULL_WORD); INSTeAD DO THE THING BELOW
 
       for(int j = 0; j < targetWords.size(); ++j) {
 		// We need to find P(a_j = i | t, s)
@@ -234,8 +187,8 @@ public class IBM1Model implements WordAligner {
 
     System.out.println("Attempt #" + attempts + ": " + maxChange);
     System.out.println(probTgivenS.getCount("le", "the"));
-    //return maxChange;
     
+    //return maxChange;
     return logLikelihood(trainingPairs);
   }
 
@@ -257,13 +210,11 @@ public class IBM1Model implements WordAligner {
         // Start by assuming the best is NULL_WORD, then improve on this
 	    String targetWord = targetWords.get(i);
 	  
-	    int bestJ = -1; // null
 	    double bestAlignProb = probTgivenS.getCount(NULL_WORD, targetWord);
         for (int j = 0; j < sourceWords.size(); j++) {
           double prob = probTgivenS.getCount(sourceWords.get(j), targetWords.get(i));
 
           if (prob > bestAlignProb) {
-	        bestJ = j;
 	        bestAlignProb = prob;
 		  }
 	    }
